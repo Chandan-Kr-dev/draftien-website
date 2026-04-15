@@ -6,16 +6,20 @@ export default function Footer() {
   return (
     <footer className="bg-gray-50 text-gray-600">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-4">
+        <div className="grid gap-10 text-center md:grid-cols-4 md:text-left">
           {/* Brand Section */}
           <div>
-            <Link href="/" className="inline-flex items-center" aria-label="Draftien home">
+            <Link
+              href="/"
+              className="mx-auto inline-flex items-center md:mx-0"
+              aria-label="Draftien home"
+            >
               <Image
                 src="/images/logo.png"
                 alt="Draftien"
-                width={140}
-                height={40}
-                className="h-8 w-auto max-w-[150px] object-contain md:h-9 md:max-w-[170px]"
+                width={180}
+                height={52}
+                className="h-10 w-auto max-w-[180px] object-contain md:h-12 md:max-w-[220px]"
               />
             </Link>
             <p className="mt-4 text-sm leading-relaxed">
@@ -72,7 +76,7 @@ export default function Footer() {
             <h4 className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
               Follow Us
             </h4>
-            <div className="mt-4 flex space-x-4">
+            <div className="mt-4 flex justify-center space-x-4 md:justify-start">
               <Globe className="h-5 w-5 cursor-pointer hover:text-indigo-600" />
               <GraduationCap className="h-5 w-5 cursor-pointer hover:text-indigo-600" />
               <Rocket className="h-5 w-5 cursor-pointer hover:text-indigo-600" />

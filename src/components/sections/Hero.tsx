@@ -59,7 +59,7 @@ export default function Hero() {
           </div>
 
           {/* Right Content - Image */}
-          <div className="relative">
+          <div className="relative hidden md:block">
             {/* Background Glow */}
             {/* <div className="absolute -inset-4 rotate-6 rounded-[2rem] bg-gradient-to-tr from-indigo-200 via-purple-200 to-fuchsia-200 opacity-60 blur-2xl"></div> */}
 
