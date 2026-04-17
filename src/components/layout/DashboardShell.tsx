@@ -32,7 +32,7 @@ export default function DashboardShell({
         {/* Top */}
         <div>
           {/* Logo */}
-          <div className="flex items-center gap-2 px-6 py-5 border-b">
+          <div className="h-16 flex items-center gap-2 px-6 border-b">
             <Image
               src="/images/logo.png"
               alt="Draftien"
