@@ -10,13 +10,14 @@ import {
   useMemo,
   useState,
 } from "react";
+import type { ApiResponse, UserProfile, UserRole } from "@/lib/types";
 
 export type AuthUser = {
   id: string;
   email: string;
   name: string;
   mobileNumber: string | null;
-  role: "student" | "teacher" | null;
+  role: UserRole;
   isVerified: boolean;
 };
 
@@ -26,6 +27,7 @@ type AuthContextType = {
   pendingEmail: string | null;
   isAuthenticated: boolean;
   loading: boolean;
+  syncUser: (nextUser: AuthUser) => void;
   sendLoginOtp: (email: string) => Promise<void>;
   verifyOtp: (otp: string) => Promise<AuthUser>;
   resendOtp: () => Promise<void>;
@@ -43,7 +45,8 @@ type VerifyOtpResponse = AuthUser & {
 
 const AUTH_STORAGE_KEY = "draftien:auth";
 const OTP_EMAIL_STORAGE_KEY = "draftien:pending-email";
-const PUBLIC_ROUTES = new Set(["/", "/login", "/verify-otp"]);
+const PUBLIC_EXACT_ROUTES = new Set(["/", "/login", "/signup", "/verify-otp"]);
+const PUBLIC_PREFIX_ROUTES = ["/courses", "/certificates"];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -109,19 +112,62 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedAuth = getStoredAuth();
-    const storedPendingEmail = getStoredPendingEmail();
+    let mounted = true;
 
-    if (storedAuth) {
-      setUser(storedAuth.user);
-      setToken(storedAuth.token);
+    async function bootstrapAuth() {
+      const storedAuth = getStoredAuth();
+      const storedPendingEmail = getStoredPendingEmail();
+
+      if (storedAuth && mounted) {
+        setUser(storedAuth.user);
+        setToken(storedAuth.token);
+      }
+
+      if (storedPendingEmail && mounted) {
+        setPendingEmail(storedPendingEmail);
+      }
+
+      // Refresh user from backend so stale local role (e.g. null) doesn't
+      // misroute dashboards after onboarding/profile updates.
+      if (storedAuth?.token) {
+        try {
+          const { api } = await import("@/lib/axios");
+          const meResponse =
+            await api.get<ApiResponse<UserProfile>>("/users/me");
+          const me = meResponse.data.data;
+
+          const refreshedUser: AuthUser = {
+            id: me.id,
+            email: me.email,
+            name: me.name,
+            mobileNumber: me.mobileNumber,
+            role: me.role,
+            isVerified: me.isVerified,
+          };
+
+          if (mounted) {
+            setUser(refreshedUser);
+            persistAuth({
+              token: storedAuth.token,
+              user: refreshedUser,
+            });
+          }
+        } catch {
+          // 401 is handled by axios interceptor; for transient failures, keep
+          // whatever local auth is available to avoid hard lockouts.
+        }
+      }
+
+      if (mounted) {
+        setLoading(false);
+      }
     }
 
-    if (storedPendingEmail) {
-      setPendingEmail(storedPendingEmail);
-    }
+    void bootstrapAuth();
 
-    setLoading(false);
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const sendLoginOtp = useCallback(async (email: string) => {
@@ -130,6 +176,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setPendingEmail(email);
     setStoredPendingEmail(email);
   }, []);
+
+  const syncUser = useCallback(
+    (nextUser: AuthUser) => {
+      setUser(nextUser);
+      const tokenToPersist = token ?? getStoredAuth()?.token ?? null;
+
+      if (tokenToPersist) {
+        persistAuth({
+          token: tokenToPersist,
+          user: nextUser,
+        });
+
+        if (!token) {
+          setToken(tokenToPersist);
+        }
+      }
+    },
+    [token],
+  );
 
   const verifyOtp = useCallback(
     async (otp: string) => {
@@ -197,6 +262,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       pendingEmail,
       isAuthenticated: Boolean(token && user),
       loading,
+      syncUser,
       sendLoginOtp,
       verifyOtp,
       resendOtp,
@@ -207,6 +273,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       token,
       pendingEmail,
       loading,
+      syncUser,
       sendLoginOtp,
       verifyOtp,
       resendOtp,
@@ -220,38 +287,64 @@ export function AuthProvider({ children }: PropsWithChildren) {
 export function AuthGuard({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const router = useRouter();
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated, user } = useAuth();
 
   // Prevent redirects during the short window after OTP verification,
   // when localStorage is updated before React state reflects it.
   const storedAuth = getStoredAuth();
   const effectiveIsAuthenticated =
     isAuthenticated || Boolean(storedAuth?.token);
+  const effectiveRole = user?.role ?? storedAuth?.user?.role ?? null;
+  const defaultPrivatePath =
+    effectiveRole === "teacher"
+      ? "/teacher"
+      : effectiveRole === "student"
+        ? "/student"
+        : "/select-role";
+
+  const isPublicPath =
+    PUBLIC_EXACT_ROUTES.has(pathname) ||
+    PUBLIC_PREFIX_ROUTES.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    );
 
   useEffect(() => {
     if (loading) {
       return;
     }
 
-    if (!effectiveIsAuthenticated && !PUBLIC_ROUTES.has(pathname)) {
+    if (!effectiveIsAuthenticated && !isPublicPath) {
       router.replace("/login");
       return;
     }
 
-    if (effectiveIsAuthenticated && pathname === "/login") {
-      router.replace("/");
+    if (
+      effectiveIsAuthenticated &&
+      (pathname === "/login" || pathname === "/signup")
+    ) {
+      router.replace(defaultPrivatePath);
     }
-  }, [effectiveIsAuthenticated, loading, pathname, router]);
+  }, [
+    defaultPrivatePath,
+    effectiveIsAuthenticated,
+    isPublicPath,
+    loading,
+    pathname,
+    router,
+  ]);
 
   if (loading) {
     return null;
   }
 
-  if (!effectiveIsAuthenticated && !PUBLIC_ROUTES.has(pathname)) {
+  if (!effectiveIsAuthenticated && !isPublicPath) {
     return null;
   }
 
-  if (effectiveIsAuthenticated && pathname === "/login") {
+  if (
+    effectiveIsAuthenticated &&
+    (pathname === "/login" || pathname === "/signup")
+  ) {
     return null;
   }
 

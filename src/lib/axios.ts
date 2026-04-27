@@ -1,4 +1,5 @@
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api-config";
 
 const AUTH_STORAGE_KEY = "draftien:auth";
 const OTP_EMAIL_STORAGE_KEY = "draftien:pending-email";
@@ -34,11 +35,9 @@ function clearAuthStorage(): void {
   window.localStorage.removeItem(OTP_EMAIL_STORAGE_KEY);
 }
 
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
-
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },

@@ -10,7 +10,12 @@ import { navLinks } from "@/data/home";
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { isAuthenticated, user } = useAuth();
-  const dashboardHref = user?.role === "teacher" ? "/teacher" : "/student";
+  const dashboardHref =
+    user?.role === "teacher"
+      ? "/teacher"
+      : user?.role === "student"
+        ? "/student"
+        : "/select-role";
 
   const openMenu = () => setIsOpen(true);
   const closeMenu = () => setIsOpen(false);
@@ -74,7 +79,7 @@ export default function Navbar() {
                   Sign In
                 </Link>
                 <Link
-                  href="/login"
+                  href="/signup"
                   className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
                 >
                   Join for Free
@@ -169,7 +174,7 @@ export default function Navbar() {
               </Link>
 
               <Link
-                href="/login"
+                href="/signup"
                 className="mt-2 rounded-full bg-indigo-600 px-4 py-2 text-center font-semibold text-white shadow-sm transition hover:bg-indigo-700"
                 onClick={closeMenu}
               >

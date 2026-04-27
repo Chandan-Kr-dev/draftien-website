@@ -4,7 +4,9 @@ import { CheckCircle, GraduationCap } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/axios";
+import type { UserProfile } from "@/lib/types";
 
 export default function StudentOnboardingPage() {
   const [name, setName] = useState("");
@@ -13,6 +15,7 @@ export default function StudentOnboardingPage() {
   const [targetExam, setTargetExam] = useState<"JEE" | "NEET" | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { syncUser } = useAuth();
 
   const sources = ["YouTube", "Meta", "Friends", "Others"];
 
@@ -56,7 +59,19 @@ export default function StudentOnboardingPage() {
         source: source ?? undefined,
       });
 
-      router.push("/");
+      const updatedMeRes = await api.get("/users/me");
+      const updatedMe = updatedMeRes.data?.data as UserProfile;
+
+      syncUser({
+        id: updatedMe.id,
+        email: updatedMe.email,
+        name: updatedMe.name,
+        mobileNumber: updatedMe.mobileNumber,
+        role: updatedMe.role,
+        isVerified: updatedMe.isVerified,
+      });
+
+      router.push("/student");
     } catch (error) {
       console.error("Student onboarding failed:", error);
       alert("Something went wrong. Please try again.");

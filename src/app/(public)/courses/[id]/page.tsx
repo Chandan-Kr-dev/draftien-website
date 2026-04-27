@@ -1,8 +1,18 @@
-import { ArrowLeft, Calendar, Users } from "lucide-react";
-import Image from "next/image";
+import {
+  ArrowLeft,
+  BookOpenText,
+  CircleDollarSign,
+  Clock4,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { courses } from "@/data/courses";
+import CourseActions from "@/components/courses/CourseActions";
+import { Badge } from "@/components/ui/Badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { formatCurrencyINR, formatDurationHours } from "@/lib/format";
+import { fetchApiData } from "@/lib/public-api";
+import type { CourseDetail } from "@/lib/types";
 
 interface CourseDetailsProps {
   params: Promise<{
@@ -10,96 +20,142 @@ interface CourseDetailsProps {
   }>;
 }
 
+function getLevelBadge(level: CourseDetail["level"]) {
+  if (level === "advanced") return "warning" as const;
+  if (level === "intermediate") return "secondary" as const;
+  return "default" as const;
+}
+
 export default async function CourseDetailsPage({
   params,
 }: CourseDetailsProps) {
   const { id } = await params;
-  const course = courses.find((c) => c.id === id);
 
-  if (!course) {
+  let course: CourseDetail;
+
+  try {
+    course = await fetchApiData<CourseDetail>(`/courses/${id}`);
+  } catch {
     notFound();
   }
 
   return (
-    <section className="min-h-screen bg-[#F5F3FF] py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
+    <section className="min-h-screen py-10">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <Link
           href="/courses"
-          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:underline"
+          className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
         >
-          <ArrowLeft size={18} />
-          Back to Courses
+          <ArrowLeft className="h-4 w-4" />
+          Back to catalog
         </Link>
 
-        <div className="grid gap-10 lg:grid-cols-2">
-          {/* Course Image */}
-          <div className="relative h-[350px] w-full overflow-hidden rounded-2xl bg-white shadow-md">
-            <Image
-              src={course.image}
-              alt={course.title}
-              fill
-              className="object-cover"
-              priority
-            />
-
-            {/* Tag Badge */}
-            <span
-              className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold text-white ${course.tagColor}`}
+        <div className="mt-5 grid gap-8 lg:grid-cols-[1.3fr_0.9fr]">
+          <Card className="overflow-hidden">
+            <div
+              className="relative min-h-52 w-full p-6 text-white"
+              style={{
+                backgroundImage: course.thumbnailUrl
+                  ? `linear-gradient(120deg, rgba(16, 24, 40, 0.72), rgba(16, 24, 40, 0.2)), url(${course.thumbnailUrl})`
+                  : "linear-gradient(135deg, color-mix(in oklab, var(--color-primary) 76%, black 6%), color-mix(in oklab, var(--color-accent) 78%, black 10%))",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
             >
-              {course.tag}
-            </span>
-          </div>
+              <div className="flex flex-wrap gap-2">
+                {course.category ? (
+                  <Badge variant="secondary">{course.category}</Badge>
+                ) : null}
+                <Badge variant={getLevelBadge(course.level)}>
+                  {course.level}
+                </Badge>
+              </div>
 
-          {/* Course Info */}
-          <div className="flex flex-col justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              <h1 className="mt-4 max-w-2xl text-4xl leading-tight sm:text-5xl">
                 {course.title}
               </h1>
 
-              <p className="mt-4 text-lg text-gray-600">{course.description}</p>
+              <p className="mt-3 max-w-2xl text-sm text-white/90 sm:text-base">
+                {course.description ??
+                  "A complete course with structured lessons, guided learning, and assessment checkpoints."}
+              </p>
 
-              {/* Stats */}
-              <div className="mt-6 flex flex-wrap items-center gap-6 text-sm text-gray-500">
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} />
-                  {course.duration}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users size={16} />
-                  {course.students}
-                </div>
-              </div>
-
-              {/* Pricing */}
-              <div className="mt-6 flex items-center gap-4">
-                <span className="text-3xl font-bold text-indigo-600">
-                  {course.price}
+              <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-white/95">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock4 className="h-4 w-4" />
+                  {formatDurationHours(course.durationHours)}
                 </span>
-                <span className="text-lg text-gray-400 line-through">
-                  {course.originalPrice}
+                <span className="inline-flex items-center gap-1.5">
+                  <UserRound className="h-4 w-4" />
+                  {course.teacherName ?? "Draftien Faculty"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <BookOpenText className="h-4 w-4" />
+                  {course.lessons.length} lessons
                 </span>
               </div>
-
             </div>
 
-            {/* CTA Buttons */}
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <button
-                type="button"
-                className="rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white transition hover:bg-indigo-700"
-              >
-                Enroll Now
-              </button>
-              <button
-                type="button"
-                className="rounded-lg border border-indigo-600 px-6 py-3 font-semibold text-indigo-600 transition hover:bg-indigo-50"
-              >
-                Add to Wishlist
-              </button>
-            </div>
-          </div>
+            <CardContent className="pt-6">
+              <h2 className="text-2xl">Syllabus</h2>
+              <div className="mt-4 space-y-2">
+                {course.lessons.map((lesson, index) => (
+                  <div
+                    key={lesson.id}
+                    className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {index + 1}. {lesson.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {lesson.contentType.toUpperCase()}{" "}
+                        {lesson.isFree
+                          ? "- Free preview"
+                          : "- Enrolled students"}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {lesson.durationMinutes ?? 0} mins
+                      </Badge>
+                      {lesson.isFree ? (
+                        <Badge variant="success">Free</Badge>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CircleDollarSign className="h-5 w-5 text-accent" />
+                Course Access
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div>
+                <p className="font-display text-4xl text-foreground">
+                  {formatCurrencyINR(course.price)}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  One-time course enrollment with lesson tracking and
+                  certificates.
+                </p>
+              </div>
+
+              <CourseActions courseId={course.id} />
+
+              <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+                After enrollment, progress and certificates are available in
+                your student dashboard.
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </section>

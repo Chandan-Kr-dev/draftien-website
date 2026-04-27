@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { api } from "@/lib/axios";
+import type { ApiResponse, UserProfile } from "@/lib/types";
 
 const OTP_LENGTH = 6;
 const RESEND_TIME = 30;
@@ -27,8 +29,14 @@ export default function VerifyOtpPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
   const router = useRouter();
-  const { verifyOtp, resendOtp, pendingEmail, loading, isAuthenticated } =
-    useAuth();
+  const {
+    verifyOtp,
+    resendOtp,
+    pendingEmail,
+    loading,
+    isAuthenticated,
+    syncUser,
+  } = useAuth();
 
   // Countdown timer
   useEffect(() => {
@@ -77,7 +85,6 @@ export default function VerifyOtpPage() {
 
   // Handle paste
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
     const pastedData = e.clipboardData
       .getData("text")
       .replace(/\D/g, "")
@@ -106,42 +113,34 @@ export default function VerifyOtpPage() {
       const otpValue = otp.join("");
       await verifyOtp(otpValue);
 
-      // Decide next step based on backend state:
-      // - role null -> select-role
-      // - isOnboarded true -> home
-      // - otherwise -> onboarding for role
-      type MeResponse = {
-        data: { role: "student" | "teacher" | null; isOnboarded: boolean };
-      };
-      const meRes = await api.get("/users/me");
-      const me = (meRes.data as MeResponse).data;
+      const meRes = await api.get<ApiResponse<UserProfile>>("/users/me");
+      const me = meRes.data.data;
+
+      syncUser({
+        id: me.id,
+        email: me.email,
+        name: me.name,
+        mobileNumber: me.mobileNumber,
+        role: me.role,
+        isVerified: me.isVerified,
+      });
 
       if (!me?.role) {
         router.push("/select-role");
       } else if (me.isOnboarded) {
-        router.push("/");
+        router.push(me.role === "teacher" ? "/teacher" : "/student");
       } else {
         router.push(
           me.role === "student" ? "/onboarding/student" : "/onboarding/teacher",
         );
       }
     } catch (requestError: unknown) {
-      const message =
-        requestError &&
-        typeof requestError === "object" &&
-        "response" in requestError &&
-        requestError.response &&
-        typeof requestError.response === "object" &&
-        "data" in requestError.response &&
-        requestError.response.data &&
-        typeof requestError.response.data === "object" &&
-        "message" in requestError.response.data &&
-        typeof requestError.response.data.message === "string"
-          ? requestError.response.data.message
-          : requestError instanceof Error
-            ? requestError.message
-            : "Unable to verify OTP. Please try again.";
-      setError(message);
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Unable to verify OTP. Please try again.",
+        ),
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -157,22 +156,12 @@ export default function VerifyOtpPage() {
       setTimer(RESEND_TIME);
       setSuccessMessage("A new OTP has been sent.");
     } catch (requestError: unknown) {
-      const message =
-        requestError &&
-        typeof requestError === "object" &&
-        "response" in requestError &&
-        requestError.response &&
-        typeof requestError.response === "object" &&
-        "data" in requestError.response &&
-        requestError.response.data &&
-        typeof requestError.response.data === "object" &&
-        "message" in requestError.response.data &&
-        typeof requestError.response.data.message === "string"
-          ? requestError.response.data.message
-          : requestError instanceof Error
-            ? requestError.message
-            : "Unable to resend OTP. Please try again.";
-      setError(message);
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Unable to resend OTP. Please try again.",
+        ),
+      );
     } finally {
       setIsResending(false);
     }
@@ -221,6 +210,8 @@ export default function VerifyOtpPage() {
                 }}
                 type="text"
                 inputMode="numeric"
+                autoComplete={index === 0 ? "one-time-code" : "off"}
+                aria-label={`OTP digit ${index + 1}`}
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(e.target.value, index)}
@@ -232,13 +223,19 @@ export default function VerifyOtpPage() {
           </div>
 
           {error ? (
-            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+            <p
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+              aria-live="polite"
+            >
               {error}
             </p>
           ) : null}
 
           {successMessage ? (
-            <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            <p
+              className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700"
+              aria-live="polite"
+            >
               {successMessage}
             </p>
           ) : null}
