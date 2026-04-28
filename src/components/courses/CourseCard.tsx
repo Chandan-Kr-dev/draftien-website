@@ -1,71 +1,87 @@
-import { ArrowRight, Calendar, Users } from "lucide-react";
-import Image from "next/image";
+import { ArrowRight, Clock3, Gauge, UserRound } from "lucide-react";
 import Link from "next/link";
-import type { Program } from "@/data/courses";
+import { Badge } from "@/components/ui/Badge";
+import { Card, CardContent, CardFooter } from "@/components/ui/Card";
+import { formatCurrencyINR, formatDurationHours } from "@/lib/format";
+import type { Course } from "@/lib/types";
 
 interface CourseCardProps {
-  course: Program;
+  course: Course;
+}
+
+function buildThumbnailStyle(thumbnailUrl: string | null) {
+  if (thumbnailUrl) {
+    return {
+      backgroundImage: `linear-gradient(to top, rgba(10,10,20,0.5), rgba(10,10,20,0.12)), url(${thumbnailUrl})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    } as const;
+  }
+
+  return {
+    backgroundImage:
+      "linear-gradient(140deg, color-mix(in oklab, var(--color-primary) 78%, white), color-mix(in oklab, var(--color-accent) 74%, white))",
+  } as const;
 }
 
 export default function CourseCard({ course }: CourseCardProps) {
   return (
-    <Link href={`/courses/${course.id}`}>
-      <div className="group overflow-hidden rounded-2xl bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-        {/* Image */}
-        <div className="relative h-52 w-full">
-          <Image
-            src={course.image}
-            alt={course.title}
-            fill
-            className="object-cover transition duration-300 group-hover:scale-105"
-          />
-
-          {/* Tag Badge */}
-          <span
-            className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold text-white ${course.tagColor}`}
-          >
-            {course.tag}
-          </span>
+    <Card className="group overflow-hidden border-border/70 transition-transform duration-300 hover:-translate-y-1">
+      <div
+        className="relative h-48 w-full"
+        style={buildThumbnailStyle(course.thumbnailUrl)}
+      >
+        <div className="absolute left-4 top-4 flex gap-2">
+          {course.category ? (
+            <Badge variant="secondary">{course.category}</Badge>
+          ) : null}
+          <Badge variant="outline" className="bg-white/85 text-foreground">
+            {course.level}
+          </Badge>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <h3 className="line-clamp-2 text-lg font-semibold text-gray-900">
+        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+          <h3 className="line-clamp-2 font-display text-xl leading-tight">
             {course.title}
           </h3>
-
-          {/* Stats */}
-          <div className="mt-3 flex items-center gap-6 text-sm text-gray-500">
-            <div className="flex items-center gap-2">
-              <Calendar size={16} />
-              {course.duration}
-            </div>
-            <div className="flex items-center gap-2">
-              <Users size={16} />
-              {course.students}
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div className="mt-4 flex items-center gap-3">
-            <span className="text-xl font-bold text-indigo-600">
-              {course.price}
-            </span>
-            <span className="text-sm text-gray-400 line-through">
-              {course.originalPrice}
-            </span>
-          </div>
-
-          {/* CTA */}
-          <button
-            type="button"
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white cursor-pointer transition hover:bg-indigo-700"
-          >
-            Enroll Now
-            <ArrowRight size={16} />
-          </button>
         </div>
       </div>
-    </Link>
+
+      <CardContent className="pt-4">
+        <p className="line-clamp-2 min-h-10 text-sm text-muted-foreground">
+          {course.description ??
+            "Comprehensive learning modules with guided practice and assessments."}
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+          <div className="inline-flex items-center gap-1.5">
+            <Clock3 className="h-3.5 w-3.5" />
+            {formatDurationHours(course.durationHours)}
+          </div>
+          <div className="inline-flex items-center gap-1.5">
+            <Gauge className="h-3.5 w-3.5" />
+            {course.level}
+          </div>
+          <div className="col-span-2 inline-flex items-center gap-1.5">
+            <UserRound className="h-3.5 w-3.5" />
+            {course.teacherName ?? "Draftien Faculty"}
+          </div>
+        </div>
+      </CardContent>
+
+      <CardFooter className="items-center justify-between">
+        <p className="font-display text-xl text-foreground">
+          {formatCurrencyINR(course.price)}
+        </p>
+
+        <Link
+          href={`/courses/${course.id}`}
+          className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          View details
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </CardFooter>
+    </Card>
   );
 }

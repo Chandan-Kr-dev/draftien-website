@@ -22,15 +22,20 @@ export default function TeacherLayout({
       return;
     }
 
+    if (user.role === "student") {
+      router.replace("/student");
+      return;
+    }
+
     if (user.role !== "teacher") {
-      router.replace("/");
+      router.replace("/select-role");
     }
   }, [user, loading, router]);
 
   if (loading || !user) return null;
 
   return (
-    <DashboardShell role="teacher" links={teacherLinks}>
+    <DashboardShell panel="teacher" links={teacherLinks}>
       {children}
     </DashboardShell>
   );

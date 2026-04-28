@@ -2,9 +2,9 @@ import { BrainCircuit, GraduationCap, Headphones, Video } from "lucide-react";
 
 export const navLinks = [
   { name: "Browse Courses", href: "/courses" },
-  { name: "Live Classes", href: "#" },
-  { name: "Study Material", href: "#" },
-  { name: "Test Series", href: "#" },
+  { name: "Student Area", href: "/student" },
+  { name: "Teacher Area", href: "/teacher" },
+  { name: "Certificates", href: "/student/certificates" },
 ];
 
 export const features = [

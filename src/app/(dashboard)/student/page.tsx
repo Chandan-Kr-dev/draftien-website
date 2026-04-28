@@ -21,177 +21,267 @@ export default function StudentPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await api.get("/api/courses/my");
-        // The backend might wrap the data in a 'data' field depending on the controller implementation
-        // But looking at the service, it returns the array directly.
-        // Let's handle both cases just in case.
-        const data = response.data?.data || response.data;
-        console.log("Student dashboard courses:", data);
-        setCourses(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Failed to load courses");
-      } finally {
-        setLoading(false);
-      }
-    };
+    let mounted = true;
 
-    fetchCourses();
+    async function loadDashboard() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [myCourses, myCertificates] = await Promise.all([
+          getMyCourses(),
+          getCertificates(),
+        ]);
+
+        const studentCourses = myCourses as StudentCourse[];
+
+        const progressEntries = await Promise.all(
+          studentCourses.slice(0, 4).map(async (course) => {
+            try {
+              const progress = await getCourseProgress(course.id);
+              return [course.id, progress] as const;
+            } catch {
+              return null;
+            }
+          }),
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        setCourses(studentCourses);
+        setCertificates(myCertificates);
+        setProgressMap(
+          progressEntries.reduce<Record<string, CourseProgress>>(
+            (accumulator, current) => {
+              if (current) {
+                accumulator[current[0]] = current[1];
+              }
+              return accumulator;
+            },
+            {},
+          ),
+        );
+      } catch (requestError) {
+        if (mounted) {
+          setError(
+            getApiErrorMessage(
+              requestError,
+              "Could not load student dashboard data.",
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboard();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const totalEnrolled = courses.length;
-  const completedCourses = courses.filter(c => c.progressPercentage === 100).length;
+  const stats = useMemo(() => {
+    const totalCourses = courses.length;
+    const completedCourses = courses.filter(
+      (course) => course.progressPercentage >= 100,
+    ).length;
+    const averageProgress =
+      totalCourses > 0
+        ? Math.round(
+            courses.reduce(
+              (sum, course) => sum + course.progressPercentage,
+              0,
+            ) / totalCourses,
+          )
+        : 0;
+
+    return {
+      totalCourses,
+      completedCourses,
+      averageProgress,
+      certificates: certificates.length,
+    };
+  }, [certificates.length, courses]);
+
+  if (loading) {
+    return (
+      <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Welcome Card */}
-      <div className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-2xl p-6">
-        <h1 className="text-xl font-semibold mb-1">Welcome back 👋</h1>
-        <p className="text-sm text-white/80">
-          You’re on a 5-day streak. Keep learning!
-        </p>
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/10 to-accent/8">
+        <CardHeader>
+          <Badge>Student dashboard</Badge>
+          <CardTitle>Keep your preparation momentum</CardTitle>
+          <CardDescription>
+            Progress and certificate status are synced directly from the LMS
+            API.
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
-        <div className="mt-4 flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <Flame size={16} />5 Day Streak
-          </div>
-          <div className="flex items-center gap-2">
-            <Trophy size={16} />
-            72% Completed
-          </div>
-        </div>
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          icon={BookOpen}
+          label="Enrolled"
+          value={String(stats.totalCourses)}
+        />
+        <StatCard
+          icon={TrendingUp}
+          label="Avg progress"
+          value={`${stats.averageProgress}%`}
+        />
+        <StatCard
+          icon={Clock3}
+          label="Completed"
+          value={String(stats.completedCourses)}
+        />
+        <StatCard
+          icon={Award}
+          label="Certificates"
+          value={String(stats.certificates)}
+        />
       </div>
 
-      {/* Continue Learning */}
-      {courses.length > 0 && (
-        <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-5">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-            Continue Learning
-          </h2>
-
-          <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-white/10">
-            <div>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {courses[0].title}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Instructor: {courses[0].teacherName}
-              </p>
-            </div>
-
-            <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
-              <PlayCircle size={16} />
-              Resume
-            </button>
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>My courses</CardTitle>
+            <CardDescription>
+              Top enrolled courses and current progress.
+            </CardDescription>
           </div>
-        </div>
-      )}
+          <Link
+            href="/student/courses"
+            className="inline-flex h-8 items-center rounded-md border border-border bg-surface px-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            View all
+          </Link>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {courses.slice(0, 4).map((course) => {
+            const lessonSummary = progressMap[course.id]?.lessons;
+            const completedLessons = lessonSummary
+              ? lessonSummary.filter((lesson) => lesson.isCompleted).length
+              : null;
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Courses Enrolled" value={totalEnrolled.toString()} icon={BookOpen} />
-        <StatCard title="Hours Learned" value="124h" icon={Clock} />
-        <StatCard title="Completed" value={`${completedCourses} Courses`} icon={Trophy} />
-      </div>
-
-      {/* My Courses */}
-      <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-5">
-        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-          My Courses
-        </h2>
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-10 text-gray-500">
-            <Loader2 className="animate-spin mb-2" size={24} />
-            <p>Loading your courses...</p>
-          </div>
-        ) : error ? (
-          <p className="text-red-500 text-sm py-4">{error}</p>
-        ) : courses.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500 dark:text-gray-400">You haven't enrolled in any courses yet.</p>
-            <Link href="/courses" className="text-indigo-600 hover:underline text-sm mt-2 inline-block">
-              Browse Courses
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {courses.map((course) => (
+            return (
               <div
                 key={course.id}
-                className="p-4 rounded-xl border border-gray-200 dark:border-white/10"
+                className="rounded-lg border border-border/70 bg-background px-4 py-3"
               >
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {course.title}
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-medium text-foreground">
+                    {course.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {completedLessons !== null
+                      ? `${completedLessons}/${lessonSummary.length} lessons`
+                      : "Lesson progress unavailable"}
+                  </p>
+                </div>
 
-                <div className="mt-2 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full bg-indigo-500 transition-all duration-500"
-                    style={{ width: `${course.progressPercentage}%` }}
+                    className="h-full rounded-full bg-primary"
+                    style={{
+                      width: `${Math.max(0, Math.min(100, course.progressPercentage))}%`,
+                    }}
                   />
                 </div>
 
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {course.progressPercentage}% completed
+                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{course.progressPercentage.toFixed(0)}% complete</span>
+                  <Link
+                    href={`/courses/${course.id}`}
+                    className="text-primary hover:underline"
+                  >
+                    Open course
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+
+          {courses.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+              You are not enrolled in any courses yet. Browse the catalog to
+              start learning.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Latest certificates</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {certificates.slice(0, 3).map((certificate) => (
+            <div
+              key={certificate.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-background px-4 py-3"
+            >
+              <div>
+                <p className="font-medium text-foreground">
+                  {certificate.courseTitle}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Issued on {formatDate(certificate.issuedAt)}
                 </p>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Upcoming Classes */}
-      <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-5">
-        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-          Upcoming Classes
-        </h2>
-
-        <div className="space-y-3">
-          {[
-            { subject: "Physics", time: "10:00 AM" },
-            { subject: "Maths", time: "2:00 PM" },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/10"
-            >
-              <p className="text-sm text-gray-900 dark:text-white">
-                {item.subject}
-              </p>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {item.time}
-              </span>
+              <Link
+                href={`/certificates/${certificate.id}`}
+                className="text-sm text-primary hover:underline"
+              >
+                View
+              </Link>
             </div>
           ))}
-        </div>
-      </div>
+
+          {certificates.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No certificates yet.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
 function StatCard({
-  title,
-  value,
   icon: Icon,
+  label,
+  value,
 }: {
-  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
   value: string;
-  icon: any;
 }) {
   return (
-    <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-4 flex items-center justify-between">
-      <div>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{title}</p>
-        <p className="text-xl font-semibold text-gray-900 dark:text-white">
-          {value}
-        </p>
-      </div>
-
-      <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-        <Icon size={20} />
-      </div>
-    </div>
+    <Card>
+      <CardContent className="flex items-center justify-between pt-5">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          <p className="mt-1 text-2xl text-foreground">{value}</p>
+        </div>
+        <div className="rounded-lg bg-primary/12 p-2 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+      </CardContent>
+    </Card>
   );
 }

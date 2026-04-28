@@ -2,8 +2,11 @@ import Image from "next/image";
 import { facultyMembers } from "@/data/home";
 
 export default function Faculty() {
-  // Duplicate data for seamless infinite scrolling
-  const duplicatedFaculty = [...facultyMembers, ...facultyMembers];
+  // Duplicate data for seamless infinite scrolling with stable keys.
+  const duplicatedFaculty = facultyMembers.flatMap((member) => [
+    { ...member, marqueeKey: `${member.id}-a` },
+    { ...member, marqueeKey: `${member.id}-b` },
+  ]);
 
   return (
     <section className="bg-[#F5F3FF] py-16 sm:py-20">
@@ -22,9 +25,9 @@ export default function Faculty() {
         {/* Scrolling Faculty Cards */}
         <div className="relative mt-12 overflow-hidden">
           <div className="faculty-scroll flex w-max gap-6">
-            {duplicatedFaculty.map((member, index) => (
+            {duplicatedFaculty.map((member) => (
               <div
-                key={index}
+                key={member.marqueeKey}
                 className="group w-[260px] flex-shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm"
               >
                 {/* Image */}
@@ -55,7 +58,6 @@ export default function Faculty() {
               </div>
             ))}
           </div>
-
         </div>
       </div>
     </section>

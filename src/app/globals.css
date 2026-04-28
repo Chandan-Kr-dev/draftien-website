@@ -1,19 +1,149 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Font Configuration */
-:root {
-  --font-sans: var(--font-jakarta);
+@theme {
+  --font-sans: var(--font-work-sans);
+  --font-display: var(--font-fraunces);
+
+  --color-background: oklch(97% 0.01 95);
+  --color-foreground: oklch(24% 0.02 255);
+
+  --color-surface: oklch(99% 0.005 95);
+  --color-surface-foreground: oklch(24% 0.02 255);
+
+  --color-primary: oklch(50% 0.16 250);
+  --color-primary-foreground: oklch(98% 0.01 100);
+
+  --color-secondary: oklch(88% 0.05 75);
+  --color-secondary-foreground: oklch(28% 0.03 250);
+
+  --color-accent: oklch(66% 0.17 55);
+  --color-accent-foreground: oklch(99% 0.01 95);
+
+  --color-muted: oklch(93% 0.015 90);
+  --color-muted-foreground: oklch(46% 0.03 250);
+
+  --color-border: oklch(86% 0.02 95);
+  --color-ring: oklch(58% 0.12 250);
+
+  --color-danger: oklch(58% 0.22 24);
+  --color-danger-foreground: oklch(98% 0.01 95);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.2rem;
+  --radius-xl: 1.8rem;
+
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade-in: fade-in 0.45s ease-out;
+  --animate-pulse-soft: pulse-soft 2.6s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02);
+    }
+  }
+
+  @keyframes scroll-left {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
-/* Faculty Scroll Animation */
-@keyframes scroll-left {
-  from {
-    transform: translateX(0);
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --color-background: oklch(19% 0.02 255);
+  --color-foreground: oklch(95% 0.01 95);
+
+  --color-surface: oklch(23% 0.02 255);
+  --color-surface-foreground: oklch(95% 0.01 95);
+
+  --color-primary: oklch(70% 0.13 252);
+  --color-primary-foreground: oklch(18% 0.02 255);
+
+  --color-secondary: oklch(34% 0.04 65);
+  --color-secondary-foreground: oklch(96% 0.01 95);
+
+  --color-accent: oklch(72% 0.16 58);
+  --color-accent-foreground: oklch(18% 0.02 255);
+
+  --color-muted: oklch(29% 0.02 255);
+  --color-muted-foreground: oklch(74% 0.02 95);
+
+  --color-border: oklch(34% 0.02 255);
+  --color-ring: oklch(71% 0.12 252);
+
+  --color-danger: oklch(67% 0.2 20);
+  --color-danger-foreground: oklch(16% 0.02 255);
+}
+
+@layer base {
+  * {
+    @apply border-border;
   }
-  to {
-    transform: translateX(-50%);
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(
+        circle at 20% 18%,
+        color-mix(in oklab, var(--color-secondary) 55%, transparent) 0,
+        transparent 42%
+      ),
+      radial-gradient(
+        circle at 85% 0%,
+        color-mix(in oklab, var(--color-primary) 35%, transparent) 0,
+        transparent 32%
+      );
+    min-height: 100vh;
   }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display), serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@utility glass-panel {
+  @apply bg-surface/80 border-border/80 backdrop-blur-lg;
 }
 
 .faculty-scroll {

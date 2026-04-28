@@ -24,16 +24,22 @@ export default function StudentLayout({
       return;
     }
 
+    if (user.role === "teacher") {
+      router.replace("/teacher");
+      return;
+    }
+
     if (user.role !== "student") {
-      console.warn("Redirecting from student dashboard: role is not student");
-      router.replace("/");
+
+      router.replace("/select-role");
+
     }
   }, [user, loading, router]);
 
   if (loading || !user) return null;
 
   return (
-    <DashboardShell role="student" links={studentLinks}>
+    <DashboardShell panel="student" links={studentLinks}>
       {children}
     </DashboardShell>
   );

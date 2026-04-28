@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { getApiErrorMessage } from "@/lib/api-error";
 
-export default function LoginPage() {
+export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,20 +24,12 @@ export default function LoginPage() {
       await sendLoginOtp(email.trim());
       router.push("/verify-otp");
     } catch (requestError: unknown) {
-      const message =
-        requestError &&
-        typeof requestError === "object" &&
-        "response" in requestError &&
-        requestError.response &&
-        typeof requestError.response === "object" &&
-        "data" in requestError.response &&
-        requestError.response.data &&
-        typeof requestError.response.data === "object" &&
-        "message" in requestError.response.data &&
-        typeof requestError.response.data.message === "string"
-          ? requestError.response.data.message
-          : "Unable to send OTP. Please try again.";
-      setError(message);
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Unable to send OTP. Please try again.",
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -45,7 +38,6 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F5F3FF] px-4 py-12">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
-        {/* Logo */}
         <div className="flex justify-center">
           <Link href="/">
             <Image
@@ -59,17 +51,16 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        {/* Heading */}
         <div className="mt-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Create Your Account
+          </h1>
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to continue to Draftien
+            Get started with Draftien using email OTP.
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-          {/* Email Input */}
           <div>
             <label
               htmlFor="email"
@@ -91,7 +82,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Terms Checkbox */}
           <div className="flex items-start gap-2">
             <input
               id="terms"
@@ -128,24 +118,21 @@ export default function LoginPage() {
             </p>
           ) : null}
 
-          {/* Continue Button */}
           <button
             type="submit"
             disabled={!email || !accepted || isSubmitting}
             className="w-full rounded-lg bg-indigo-600 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? "Sending OTP..." : "Continue"}
+            {isSubmitting ? "Sending OTP..." : "Create account"}
           </button>
         </form>
 
-        {/* Divider */}
         <div className="my-6 flex items-center">
           <div className="h-px flex-1 bg-gray-300"></div>
           <span className="px-4 text-sm text-gray-500">OR</span>
           <div className="h-px flex-1 bg-gray-300"></div>
         </div>
 
-        {/* Google Login */}
         <button
           type="button"
           className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-3 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
@@ -154,14 +141,13 @@ export default function LoginPage() {
           Continue with Google
         </button>
 
-        {/* Sign Up Link */}
         <p className="mt-6 text-center text-sm text-gray-600">
-          Don’t have an account?{" "}
+          Already have an account?{" "}
           <Link
-            href="/signup"
+            href="/login"
             className="font-medium text-indigo-600 hover:underline"
           >
-            Sign up
+            Sign in
           </Link>
         </p>
       </div>

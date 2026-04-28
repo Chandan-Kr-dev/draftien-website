@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Moon, Search, X } from "lucide-react";
+import { LogOut, type LucideIcon, Menu, Moon, Search, X } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,17 +10,17 @@ import { cn } from "@/lib/utils";
 type SidebarLink = {
   label: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
 };
 
 export default function DashboardShell({
   children,
   links,
-  role,
+  panel,
 }: {
   children: React.ReactNode;
   links: SidebarLink[];
-  role: "student" | "teacher";
+  panel: "student" | "teacher";
 }) {
   const { logout } = useAuth();
   const router = useRouter();
@@ -80,7 +80,12 @@ export default function DashboardShell({
             </div>
 
             {/* Close btn mobile */}
-            <button type="button" onClick={() => setIsOpen(false)} className="lg:hidden">
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="lg:hidden"
+              aria-label="Close sidebar"
+            >
               <X size={20} />
             </button>
           </div>
@@ -89,7 +94,7 @@ export default function DashboardShell({
           <nav className="p-3 space-y-1">
             {links.map((link) => {
               const isActive =
-                pathname === link.href || pathname.startsWith(link.href + "/");
+                pathname === link.href || pathname.startsWith(`${link.href}/`);
 
               const Icon = link.icon;
 
@@ -143,7 +148,7 @@ export default function DashboardShell({
 
       {/* Main */}
       <div className="flex-1 flex flex-col">
-        <DashboardHeader role={role} onMenuClick={() => setIsOpen(true)} />
+        <DashboardHeader panel={panel} onMenuClick={() => setIsOpen(true)} />
 
         <main className="p-4 sm:p-6 flex-1">{children}</main>
       </div>
@@ -154,10 +159,10 @@ export default function DashboardShell({
 /* ================= HEADER ================= */
 
 function DashboardHeader({
-  role,
+  panel,
   onMenuClick,
 }: {
-  role: "student" | "teacher";
+  panel: "student" | "teacher";
   onMenuClick: () => void;
 }) {
   const pathname = usePathname();
@@ -177,6 +182,7 @@ function DashboardHeader({
           type="button"
           onClick={onMenuClick}
           className="lg:hidden rounded-md p-1 text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10"
+          aria-label="Open sidebar"
         >
           <Menu size={22} />
         </button>
@@ -186,7 +192,7 @@ function DashboardHeader({
             {getTitle()}
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-            {role === "student" ? "Student Panel" : "Teacher Panel"}
+            {panel === "student" ? "Student Panel" : "Teacher Panel"}
           </p>
         </div>
       </div>
@@ -197,6 +203,7 @@ function DashboardHeader({
         <div className="hidden sm:flex items-center gap-2 bg-gray-100 dark:bg-white/10 px-3 py-2 rounded-lg">
           <Search size={16} className="text-gray-400" />
           <input
+            aria-label="Search dashboard"
             placeholder="Search..."
             className="bg-transparent outline-none text-sm w-48 sm:w-72 text-gray-700 dark:text-gray-200"
           />

@@ -16,12 +16,12 @@ export default function Advantage() {
 
         {/* Feature Cards */}
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature, index) => {
+          {features.map((feature) => {
             const Icon = feature.icon;
 
             return (
               <div
-                key={index}
+                key={feature.title}
                 className="flex h-full flex-col rounded-3xl bg-white p-8 shadow-sm transition duration-300 hover:shadow-md"
               >
                 {/* Icon */}

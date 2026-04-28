@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/axios";
+import type { UserProfile } from "@/lib/types";
 
 type ExamType = "JEE" | "NEET";
 
@@ -21,6 +22,7 @@ export default function TeacherOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const { refreshUser } = useAuth();
   const router = useRouter();
+  const { syncUser } = useAuth();
 
   const subjectOptions: Record<ExamType, string[]> = {
     JEE: ["Physics", "Chemistry", "Mathematics"],
@@ -99,7 +101,18 @@ export default function TeacherOnboardingPage() {
         // Resume upload isn't wired yet; backend accepts an optional resumeUrl.
       });
 
-      await refreshUser();
+      const updatedMeRes = await api.get("/users/me");
+      const updatedMe = updatedMeRes.data?.data as UserProfile;
+
+      syncUser({
+        id: updatedMe.id,
+        email: updatedMe.email,
+        name: updatedMe.name,
+        mobileNumber: updatedMe.mobileNumber,
+        role: updatedMe.role,
+        isVerified: updatedMe.isVerified,
+      });
+
       router.push("/teacher");
     } catch (error) {
       console.error("Teacher onboarding failed:", error);
