@@ -4,6 +4,7 @@ import { CheckCircle, GraduationCap } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/axios";
 
 export default function StudentOnboardingPage() {
@@ -12,6 +13,7 @@ export default function StudentOnboardingPage() {
   const [source, setSource] = useState<string | null>(null);
   const [targetExam, setTargetExam] = useState<"JEE" | "NEET" | null>(null);
   const [loading, setLoading] = useState(false);
+  const { refreshUser } = useAuth();
   const router = useRouter();
 
   const sources = ["YouTube", "Meta", "Friends", "Others"];
@@ -42,21 +44,22 @@ export default function StudentOnboardingPage() {
     try {
       setLoading(true);
 
-      const meRes = await api.get("/users/me");
+      const meRes = await api.get("/api/users/me");
       const me = meRes.data?.data as { role: "student" | "teacher" | null };
 
-      await api.patch("/users/me", {
+      await api.patch("/api/users/me", {
         name,
         mobileNumber: mobile,
       });
 
-      await api.patch("/users/profile", {
+      await api.patch("/api/users/profile", {
         ...(me.role ? {} : { role: "student" }),
         targetExam: targetExam ?? undefined,
         source: source ?? undefined,
       });
 
-      router.push("/");
+      await refreshUser();
+      router.push("/student");
     } catch (error) {
       console.error("Student onboarding failed:", error);
       alert("Something went wrong. Please try again.");

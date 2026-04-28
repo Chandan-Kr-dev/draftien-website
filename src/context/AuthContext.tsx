@@ -29,6 +29,7 @@ type AuthContextType = {
   sendLoginOtp: (email: string) => Promise<void>;
   verifyOtp: (otp: string) => Promise<AuthUser>;
   resendOtp: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   logout: () => void;
 };
 
@@ -126,7 +127,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const sendLoginOtp = useCallback(async (email: string) => {
     const { api } = await import("@/lib/axios");
-    await api.post("/auth/login", { email });
+    await api.post("/api/auth/login", { email });
     setPendingEmail(email);
     setStoredPendingEmail(email);
   }, []);
@@ -138,7 +139,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       const { api } = await import("@/lib/axios");
-      const response = await api.post("/auth/verify-otp", {
+      const response = await api.post("/api/auth/verify-otp", {
         email: pendingEmail,
         otp,
       });
@@ -179,8 +180,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const { api } = await import("@/lib/axios");
-    await api.post("/auth/resend-otp", { email: pendingEmail });
+    await api.post("/api/auth/resend-otp", { email: pendingEmail });
   }, [pendingEmail]);
+
+  const refreshUser = useCallback(async () => {
+    const { api } = await import("@/lib/axios");
+    try {
+      const response = await api.get("/api/users/me");
+      const userData = response.data?.data as AuthUser | undefined;
+      if (userData) {
+        setUser(userData);
+        // Also update stored auth
+        const storedAuth = getStoredAuth();
+        if (storedAuth) {
+          persistAuth({ ...storedAuth, user: userData });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to refresh user:", error);
+    }
+  }, []);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -200,6 +219,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       sendLoginOtp,
       verifyOtp,
       resendOtp,
+      refreshUser,
       logout,
     }),
     [
@@ -210,6 +230,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       sendLoginOtp,
       verifyOtp,
       resendOtp,
+      refreshUser,
       logout,
     ],
   );

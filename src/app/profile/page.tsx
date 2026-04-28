@@ -28,7 +28,7 @@ export default function ProfilePage() {
         const apiBaseUrl =
           process.env.EXPO_PUBLIC_API_BASE_URL ??
           process.env.NEXT_PUBLIC_API_BASE_URL;
-        const res = await fetch(`${apiBaseUrl}/users/me`, {
+        const res = await fetch(`${apiBaseUrl}/api/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

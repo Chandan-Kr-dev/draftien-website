@@ -4,6 +4,7 @@ import { CheckCircle, Circle, FileText, Upload, User } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/axios";
 
 type ExamType = "JEE" | "NEET";
@@ -18,6 +19,7 @@ export default function TeacherOnboardingPage() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [resume, setResume] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const { refreshUser } = useAuth();
   const router = useRouter();
 
   const subjectOptions: Record<ExamType, string[]> = {
@@ -79,17 +81,17 @@ export default function TeacherOnboardingPage() {
     try {
       setLoading(true);
 
-      const meRes = await api.get("/users/me");
+      const meRes = await api.get("/api/users/me");
       const me = meRes.data?.data as {
         role: "student" | "teacher" | null;
       };
 
-      await api.patch("/users/me", {
+      await api.patch("/api/users/me", {
         name,
         mobileNumber: mobile,
       });
 
-      await api.patch("/users/profile", {
+      await api.patch("/api/users/profile", {
         ...(me.role ? {} : { role: "teacher" }),
         subjects,
         experience: experienceNum,
@@ -97,7 +99,8 @@ export default function TeacherOnboardingPage() {
         // Resume upload isn't wired yet; backend accepts an optional resumeUrl.
       });
 
-      router.push("/");
+      await refreshUser();
+      router.push("/teacher");
     } catch (error) {
       console.error("Teacher onboarding failed:", error);
       alert("Something went wrong. Please try again.");

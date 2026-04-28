@@ -17,12 +17,15 @@ export default function StudentLayout({
   useEffect(() => {
     if (loading) return;
 
+    console.log("StudentLayout check:", { userId: user?.id, role: user?.role });
+
     if (!user) {
       router.replace("/login");
       return;
     }
 
     if (user.role !== "student") {
+      console.warn("Redirecting from student dashboard: role is not student");
       router.replace("/");
     }
   }, [user, loading, router]);

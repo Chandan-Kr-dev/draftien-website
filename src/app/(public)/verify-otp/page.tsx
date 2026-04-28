@@ -27,7 +27,7 @@ export default function VerifyOtpPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
   const router = useRouter();
-  const { verifyOtp, resendOtp, pendingEmail, loading, isAuthenticated } =
+  const { verifyOtp, resendOtp, refreshUser, pendingEmail, loading, isAuthenticated } =
     useAuth();
 
   // Countdown timer
@@ -113,17 +113,20 @@ export default function VerifyOtpPage() {
       type MeResponse = {
         data: { role: "student" | "teacher" | null; isOnboarded: boolean };
       };
-      const meRes = await api.get("/users/me");
+      const meRes = await api.get("/api/users/me");
       const me = (meRes.data as MeResponse).data;
 
       if (!me?.role) {
         router.push("/select-role");
-      } else if (me.isOnboarded) {
-        router.push("/");
       } else {
-        router.push(
-          me.role === "student" ? "/onboarding/student" : "/onboarding/teacher",
-        );
+        await refreshUser();
+        if (me.isOnboarded) {
+          router.push(me.role === "student" ? "/student" : "/teacher");
+        } else {
+          router.push(
+            me.role === "student" ? "/onboarding/student" : "/onboarding/teacher",
+          );
+        }
       }
     } catch (requestError: unknown) {
       const message =
